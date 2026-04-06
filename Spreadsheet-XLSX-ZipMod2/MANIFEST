@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Spreadsheet-XLSX-ZipMod2.t
+lib/Spreadsheet/XLSX/ZipMod2.pm
