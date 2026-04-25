@@ -1,5 +1,10 @@
 # Corrupt Office File Salvager
 
+<!--PAGES_LINK_BANNER-->
+> 🌐 **Live page:** [https://socrtwo.github.io/coffice2txt-SF/](https://socrtwo.github.io/coffice2txt-SF/)  
+> 📦 **Releases:** [github.com/socrtwo/coffice2txt-SF/releases](https://github.com/socrtwo/coffice2txt-SF/releases)
+<!--/PAGES_LINK_BANNER-->
+
 Extracts readable text from corrupt Microsoft Office files (DOC, XLS, PPT) when the application itself cannot open them. Uses low-level binary parsing to salvage whatever text remains.
 
 **Language:** Perl  
