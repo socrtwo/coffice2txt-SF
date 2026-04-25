@@ -1,11 +1,6 @@
 <!--MODERNIZED:v1-->
 # Coffice2txt
 
-<!--PAGES_LINK_BANNER-->
-> 🌐 **Live page:** [https://socrtwo.github.io/coffice2txt-SF/](https://socrtwo.github.io/coffice2txt-SF/)  
-> 📦 **Releases:** [github.com/socrtwo/coffice2txt-SF/releases](https://github.com/socrtwo/coffice2txt-SF/releases)
-<!--/PAGES_LINK_BANNER-->
-
 > Migrated from SourceForge via SF2GH Migrator
 
 [![Live page](https://img.shields.io/badge/live-page-ff2e93?style=for-the-badge)](https://socrtwo.github.io/coffice2txt-SF/)
