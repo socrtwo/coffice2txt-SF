@@ -1,15 +1,14 @@
-# IDE / Visual Studio
+# IDE / editors
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
 .vs/
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-packages/
-*.nupkg
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
@@ -20,9 +19,28 @@ ehthumbs.db
 # Backups
 *.bak
 *.tmp
-*.swp
-*~
 
-# Config with credentials
+# Perl / CPAN build artifacts
+blib/
+pm_to_blib
+MYMETA.*
+!Spreadsheet-XLSX-*/MYMETA.*
+Makefile
+!Spreadsheet-XLSX-*/Makefile
+*.tar.gz
+*.zip
+.build/
+_build/
+local/
+.carton/
+cpanm-build/
+
+# Release outputs
+dist/
+staging/
+
+# Config / credentials
 config.php
 cookiefile
+.env
+.env.*
