@@ -1,0 +1,181 @@
+name: Build & publish multi-platform release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.0.0). Leave blank to use the workflow run tag.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build platform bundles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+          elif [ -n "${{ inputs.tag }}" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="v$(cat VERSION 2>/dev/null || echo 0.0.0)-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag: $tag"
+
+      - name: Lint Perl files
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y perl
+          errors=0
+          while IFS= read -r f; do
+            echo "  perl -c $f"
+            perl -c "$f" || errors=$((errors + 1))
+          done < <(find . -type f \( -name '*.pl' -o -name '*.pm' \) ! -path './.git/*')
+          if [ "$errors" -gt 0 ]; then
+            echo "::warning::$errors file(s) had Perl syntax issues"
+          fi
+
+      - name: Build platform bundles
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist staging
+          base="coffice2txt-${VERSION}"
+
+          # Files included in every desktop/mobile bundle
+          payload=(
+            coffice2txt.pl coffice2txtworking.pl
+            ParseExcel.pm ReadPDP.pm TempFolderCreator.pm
+            Utility2007PDP.pm ZipMod2.pm
+            ss2tk test.pl xlscatPDP
+            Spreadsheet-XLSX-TempFolderCreator
+            Spreadsheet-XLSX-Utility2007PDP
+            Spreadsheet-XLSX-ZipMod2
+            LICENSE README.md CHANGELOG.md VERSION cpanfile
+          )
+
+          stage_common() {
+            local dest="$1"
+            mkdir -p "$dest"
+            for f in "${payload[@]}"; do
+              if [ -e "$f" ]; then
+                cp -r "$f" "$dest/"
+              fi
+            done
+          }
+
+          # ---- Linux ----
+          dir="staging/${base}-linux"
+          stage_common "$dir"
+          cp scripts/run.sh "$dir/run.sh"
+          chmod +x "$dir/run.sh"
+          tar -czf "dist/${base}-linux.tar.gz" -C staging "$(basename "$dir")"
+
+          # ---- macOS ----
+          dir="staging/${base}-macos"
+          stage_common "$dir"
+          cp scripts/run.command "$dir/run.command"
+          chmod +x "$dir/run.command"
+          tar -czf "dist/${base}-macos.tar.gz" -C staging "$(basename "$dir")"
+
+          # ---- Windows ----
+          dir="staging/${base}-windows"
+          stage_common "$dir"
+          cp scripts/run.bat "$dir/run.bat"
+          (cd staging && zip -qr "../dist/${base}-windows.zip" "$(basename "$dir")")
+
+          # ---- ChromeOS (Crostini = Linux) ----
+          dir="staging/${base}-chromeos"
+          stage_common "$dir"
+          cp scripts/run.sh "$dir/run.sh"
+          chmod +x "$dir/run.sh"
+          tar -czf "dist/${base}-chromeos.tar.gz" -C staging "$(basename "$dir")"
+
+          # ---- Android (Termux) ----
+          dir="staging/${base}-android"
+          stage_common "$dir"
+          cp scripts/setup-termux.sh "$dir/setup-termux.sh"
+          chmod +x "$dir/setup-termux.sh"
+          tar -czf "dist/${base}-android.tar.gz" -C staging "$(basename "$dir")"
+
+          # ---- iOS (a-Shell / iSH) ----
+          dir="staging/${base}-ios"
+          stage_common "$dir"
+          cp scripts/setup-ish.sh "$dir/setup-ish.sh"
+          chmod +x "$dir/setup-ish.sh"
+          tar -czf "dist/${base}-ios.tar.gz" -C staging "$(basename "$dir")"
+
+          # ---- Web ----
+          dir="staging/${base}-web"
+          mkdir -p "$dir"
+          cp -r web/. "$dir/"
+          cp LICENSE README.md "$dir/"
+          (cd staging && zip -qr "../dist/${base}-web.zip" "$(basename "$dir")")
+
+          # ---- Source archives ----
+          git archive --format=tar.gz --prefix="${base}/" -o "dist/${base}-source.tar.gz" HEAD
+          git archive --format=zip   --prefix="${base}/" -o "dist/${base}-source.zip"   HEAD
+
+          # ---- Checksums ----
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+
+          ls -la dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coffice2txt-${{ steps.ver.outputs.version }}
+          path: dist/
+
+      - name: Create / update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Coffice2txt ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
+          body: |
+            Multi-platform release of Coffice2txt ${{ steps.ver.outputs.tag }}.
+
+            See [`CHANGELOG.md`](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+            ## Bundles
+
+            | Platform | File |
+            |---|---|
+            | Windows  | `coffice2txt-${{ steps.ver.outputs.version }}-windows.zip` |
+            | macOS    | `coffice2txt-${{ steps.ver.outputs.version }}-macos.tar.gz` |
+            | Linux    | `coffice2txt-${{ steps.ver.outputs.version }}-linux.tar.gz` |
+            | ChromeOS | `coffice2txt-${{ steps.ver.outputs.version }}-chromeos.tar.gz` |
+            | Android  | `coffice2txt-${{ steps.ver.outputs.version }}-android.tar.gz` |
+            | iOS      | `coffice2txt-${{ steps.ver.outputs.version }}-ios.tar.gz` |
+            | Web      | `coffice2txt-${{ steps.ver.outputs.version }}-web.zip` |
+
+            SHA-256 checksums for every artifact are in `SHA256SUMS.txt`.
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
