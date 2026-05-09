@@ -56,6 +56,9 @@ Pick the bundle that matches your platform from the [Releases page](https://gith
    run.bat path\to\corrupt.docx
    ```
 
+> Prefer a one-click installer? The legacy `corrupt_office_salvager_setup_1.0.3_without_adware.exe`
+> is still available on the [v1.0.3 release page](https://github.com/socrtwo/coffice2txt-SF/releases/tag/v1.0.3).
+
 ### macOS
 
 1. Install Perl + Tk (Homebrew is easiest):
